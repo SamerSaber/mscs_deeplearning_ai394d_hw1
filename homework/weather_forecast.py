@@ -21,7 +21,7 @@ class WeatherForecast:
             min_per_day: tensor of size (num_days,)
             max_per_day: tensor of size (num_days,)
         """
-        raise NotImplementedError
+        return (torch.min(self.data, dim=1).values, torch.max(self.data, dim=1).values)
 
     def find_the_largest_drop(self) -> torch.Tensor:
         """
@@ -31,16 +31,22 @@ class WeatherForecast:
         Returns:
             tensor of a single value, the difference in temperature
         """
-        raise NotImplementedError
+        day_avg = self.data.mean(dim=1)
+
+        # broadcast to calculate all possible diffs
+        diffs = day_avg[1:] - day_avg[:-1]
+        largest_drop = diffs.min()
+        return largest_drop
 
     def find_the_most_extreme_day(self) -> torch.Tensor:
-        """
-        For each day, find the measurement that differs the most from the day's average temperature
+        day_mean = self.data.mean(dim=1, keepdim=True)
+        abs_dev = (self.data - day_mean).abs()
+        idx = abs_dev.argmax(dim=1)
 
-        Returns:
-            tensor with size (num_days,)
-        """
-        raise NotImplementedError
+        rows = torch.arange(len(idx))
+        most_extreme_vals = self.data[rows, idx]
+
+        return most_extreme_vals
 
     def max_last_k_days(self, k: int) -> torch.Tensor:
         """
@@ -49,7 +55,7 @@ class WeatherForecast:
         Returns:
             tensor of size (k,)
         """
-        raise NotImplementedError
+        return self.data[0 - k :, :].max(dim=1).values
 
     def predict_temperature(self, k: int) -> torch.Tensor:
         """
@@ -62,7 +68,7 @@ class WeatherForecast:
         Returns:
             tensor of a single value, the predicted temperature
         """
-        raise NotImplementedError
+        return self.data[0 - k :, :].mean()
 
     def what_day_is_this_from(self, t: torch.FloatTensor) -> torch.LongTensor:
         """
@@ -87,4 +93,5 @@ class WeatherForecast:
         Returns:
             tensor of a single value, the index of the closest data element
         """
-        raise NotImplementedError
+
+        return torch.argmin(torch.sum(torch.abs(self.data - t), dim=1))
